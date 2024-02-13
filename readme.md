@@ -20,8 +20,7 @@ This is a simple social network application written in Python. It allows users t
 - `main.py`: Main entry point of the application.
 - `social_network.py`: Contains the `SocialNetwork` class, which manages the core functionality of the application.
 - `user.py`: Contains the `User` class, representing a user of the social network.
-- `post.py`: Contains the `Post` class and its subclasses, representing different types of posts.
 - `post_factory.py`: Contains the `PostFactory` class, responsible for creating posts of various types.
+- `post.py`: Contains the `Post` class and its subclasses, representing different types of posts.
 - `dictionary.py`: Contains dictionaries and constants used for messages and notifications.
-- `requirements.txt`: Lists the required dependencies for the application.
 
