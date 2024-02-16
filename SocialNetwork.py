@@ -1,20 +1,30 @@
 from Dictionary import *
+from enum import Enum
 
-# Decorator function to ensure that the user interacting with the SocialNetwork is connected.
 def require_connection(func):
-    def wrapper(self,*args):
-        if isinstance(self, Post) and isinstance(user:=args[0], User):
-            user.network.if_user_not_connected_exaption(user)
-        elif isinstance(self, Post):
-            self.owner.network.if_user_not_connected_exaption(self.owner)
+    # Check for user conncetion
+    def wrapper(self, *args):
+        if isinstance(self, Post):
+            user_conncetion_state = self.owner.connction_state
+            if isinstance(user:=args[0], User):
+                user_conncetion_state = user.connction_state
+
         elif isinstance(self, User):
-            self.network.if_user_not_connected_exaption(self)
-        return func(self,*args)
+            user_conncetion_state = self.connction_state
+
+        if user_conncetion_state == ConnctionState.DISCONNECTED:
+            raise Exception("User Not Conncted")
+
+        # Call the original function
+        return func(self, *args)
     return wrapper
+
+class UsersList(dict):
+    def __missing__(self, key):
+        raise ValueError("user not exist")
 
 class SocialNetwork:
     _instance = None
-
     #singleton class
     # Ensure that only one instance of the SocialNetwork class is created.
     def __new__(cls, *args, **kwargs):
@@ -26,43 +36,40 @@ class SocialNetwork:
 
     def __init__(self, network_name):
         self.network_name = network_name
-        self.users = {}
+        self.users = UsersList()
         self.posts = []
 
     #  Create a new user and add them to the social network.
     def sign_up(self, username, password):
         if username in self.users:
             return self.users[username]
-        if self.password_check(password):
-            raise Exception('Invalid password')
+        self.password_checker(password)
         new_user = User(username, password, self)
-        self.users[username] = [new_user, True]
+        self.users[username] = new_user
         return new_user
-    
-    def if_user_not_connected_exaption(self, user):
-        if not self.users[user.username][1]:
-            raise Exception('user not connected')
-    
+        
     def upload_posts(self, post):
-        self.posts.append(post)
+        self.attached_post(post)
         self.notify_followers(post)
         self.update_network(PUBLISH_POST, post)
     
-    def password_check(self,password):
-        return len(password) < 4 or 8 < len(password) 
+    # attached post to owner and SocialNetwork
+    def attached_post(self,post):
+        self.posts.append(post)
+        post.owner.posts.append(post)
+
+    def password_checker(self,password):
+        if not 4 <= len(password) <= 8:
+            raise Exception('Invalid password')
 
     def log_out(self, username):
-        if username not in self.users:
-            raise Exception('user not exist')
-        self.users[username][1] = False
+        self.users[username].disconnect()
         self.update_network(LOGOUT, username)
     
     def log_in(self, username, password):
-        if username not in self.users:
-            raise Exception('user not exist')
-        if password != self.users[username][0].password:
+        if password != self.users[username].password:
             raise Exception('password not matching')
-        self.users[username][1] = True
+        self.users[username].connect()
         self.update_network(LOGIN, username)
 
     # Notify followers of a user about a new post.
@@ -78,14 +85,18 @@ class SocialNetwork:
 
     def __str__(self):
         network_info = [PRINT_MESSAGES[INFO].format(self.network_name)]
-        network_info.extend(str(user[0]) for user in self.users.values())
+        network_info.extend(str(user) for user in self.users.values())
         return '\n'.join(network_info)
 
+class ConnctionState(Enum):
+    CONNECTED = True
+    DISCONNECTED = False
 
 class User():
     def __init__(self, username, password, network):
         self.username = username
         self.password = password
+        self.connction_state = ConnctionState.CONNECTED
         self.network = network
         self.followers = set()
         self.following = set()
@@ -97,29 +108,40 @@ class User():
         message_format = NOTIFICATION_MESSAGES.get(type, NOTIFICATION_MESSAGES[UNKNOWN])
         self.notifications.append(message_format.format(username))
 
+    def connect(self):
+        self.connction_state = ConnctionState.CONNECTED
+
+    def disconnect(self):
+        self.connction_state = ConnctionState.DISCONNECTED
+
     @require_connection
     def follow(self, other_user):
+        if other_user is self:
+            raise Exception(f'{self.username} tring to follow himsef')
         self.followers.add(other_user)
         other_user.following.add(self)
         self.network.update_network(FOLLOW, self.username, other_user.username)
 
     @require_connection
     def unfollow(self, other_user):
-        self.followers.remove(other_user)
-        other_user.following.remove(self)
-        self.network.update_network(UNFOLLOW, self.username, other_user.username)
+        if other_user in self.followers:
+            self.followers.remove(other_user)
+            other_user.following.remove(self)
+            self.network.update_network(UNFOLLOW, self.username, other_user.username)
+        else:
+            raise Exception(f"You are not following {other_user.username}")
+
 
     @require_connection
     def publish_post(self, type, post_content, *args):
         post = PostFactory.create_post(self, type, post_content, *args)
-        self.posts.append(post)
         self.network.upload_posts(post)
         return post
 
     def print_notifications(self):
-        print(f"{self.username}'s notifications:")
-        for notification in self.notifications:
-            print(notification)
+        header = f"{self.username}'s notifications:\n"
+        notifications_block = '\n'.join(self.notifications)
+        print(header + notifications_block)
 
     def __str__(self):
         return f"User name: {self.username}, Number of posts: {len(self.posts)}, Number of followers: {len(self.following)}"
@@ -185,9 +207,8 @@ class SalePost(Post):
     @require_connection
     def discount(self, discount_percentage, password):
         if self.owner.password == password:
-            self.price *= (1 - (discount_percentage/100))
+            self.price *= 1 - discount_percentage/100
             self.owner.network.update_network(DISCOUNT, self.owner.username, self.price)
-        
     
     def __str__(self):
         availability = "For sale" if self.is_available else "Sold"
