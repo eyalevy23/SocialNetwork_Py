@@ -1,45 +1,62 @@
-# Define constants for update types
-FOLLOW = 'follow'
-UNFOLLOW = 'unfollow'
-LOGIN = 'login'
-LOGOUT = 'logout'
-PUBLISH_POST = 'publish_post'
-LIKE = 'like'
-COMMENT = 'comment'
-DISCOUNT = 'discount'
-SOLD = 'sold'
-UNKNOWN = 'Unknown'
-INFO = 'network_info'
 
-# Define constants for PostFactory class
-TEXT = 'Text'
-IMAGE = 'Image'
-SALE = 'Sale'
+from enum import Enum
+from enum import Enum, auto
 
-# Define constants for notifaction types
-PRINT_MESSAGES = {
-    FOLLOW : '{} started following {}',
-    UNFOLLOW: '{} unfollowed {}',
-    LOGIN : '{} connected',
-    LOGOUT : '{} disconnected',
-    PUBLISH_POST : '{}',
-    LIKE : 'notification to {}: {} liked your post',
-    COMMENT : 'notification to {}: {} commented on your post: {}',
-    DISCOUNT : 'Discount on {} product! The new price is: {}',
-    SOLD : "{}'s product is sold",
-    INFO : 'The social network {}:',
-    UNKNOWN : 'Unknown update type'
-}
+class UpdateType(Enum):
+    START_UP = auto()
+    FOLLOW = auto()
+    UNFOLLOW = auto()
+    LOGIN = auto()
+    LOGOUT = auto()
+    PUBLISH_POST = auto()
+    LIKE = auto()
+    COMMENT = auto()
+    DISCOUNT = auto()
+    SOLD = auto()
+    SHOW_PIC = auto()
+    UNKNOWN = auto()
 
-NOTIFI_NEWPOST = 'new_post'
-NOTIFI_LIKE = 'like'
-NOTIFI_COMMENT = 'comment'
-NOTIFI_SOLD = 'sold'
+    def format_message(self, *args):
+        message_formats = {
+            UpdateType.START_UP: 'The social network {} was created!',
+            UpdateType.FOLLOW: '{} started following {}',
+            UpdateType.UNFOLLOW: '{} unfollowed {}',
+            UpdateType.LOGIN: '{} connected',
+            UpdateType.LOGOUT: '{} disconnected',
+            UpdateType.PUBLISH_POST: '{}',
+            UpdateType.LIKE: 'notification to {}: {} liked your post',
+            UpdateType.COMMENT: 'notification to {}: {} commented on your post: {}',
+            UpdateType.DISCOUNT: 'Discount on {} product! the new price is: {}',
+            UpdateType.SOLD: "{}'s product is sold",
+            UpdateType.SHOW_PIC: 'Shows picture',
+            UpdateType.UNKNOWN: 'Unknown update type'
+        }
+        return message_formats.get(self).format(*args)
 
-NOTIFICATION_MESSAGES = {
-    NOTIFI_NEWPOST : '{} has a new post',
-    NOTIFI_LIKE : '{} liked your post',
-    NOTIFI_COMMENT : '{} commented on your post',
-    NOTIFI_SOLD : 'Your post is sold.',
-    UNKNOWN : 'unknown message'
-}
+
+class PostType:
+    TEXT = 'Text'
+    IMAGE = 'Image'
+    SALE = 'Sale'
+
+class NotificationType(Enum):
+    NEW_POST = auto()
+    LIKE = auto()
+    COMMENT = auto()
+    SOLD = auto()
+    UNKNOWN = auto()
+
+    def format_message(self, username):
+        message_formats = {
+            NotificationType.NEW_POST : '{} has a new post',
+            NotificationType.LIKE : '{} liked your post',
+            NotificationType.COMMENT : '{} commented on your post',
+            NotificationType.SOLD : 'Your post is sold.',
+            NotificationType.UNKNOWN : 'unknown message'
+        }
+        return message_formats.get(self).format(username)
+
+class ConnectionState(Enum):
+    CONNECTED = True
+    DISCONNECTED = False
+
